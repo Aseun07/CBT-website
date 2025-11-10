@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Grade 6— Mathematics CBT (Offline)</title>
+
+  <!-- Tailwind CDN (offline-friendly while online; still usable for styling) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Fonts + base */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    :root{
+      --card-bg: rgba(255,255,255,0.9);
+      --accent-1: #06b6d4; /* cyan-500 */
+      --accent-2: #fb923c; /* orange-400 */
+      --accent-3: #f59e0b; /* amber-500 */
+      --soft: rgba(99,102,241,0.06);
+    }
+    body { font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
+    /* Page background: animated gradient */
+    .bg-gradient-anim {
+      background: linear-gradient(120deg, #bfe9ff 0%, #fff6d1 30%, #c6f6d5 60%, #f0f9ff 100%);
+      background-size: 200% 200%;
+      animation: gradientShift 12s ease infinite;
+    }
+    @keyframes gradientShift{
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Floating school icons */
+    .floating-wrap { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .float-icon {
+      position: absolute;
+      opacity: 0.9;
+      transform: translate3d(0,0,0);
+      animation: floatUp linear infinite;
+      will-change: transform, opacity;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(110% ) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      100% { transform: translateY(-10%) rotate(360deg); opacity: 0; }
+    }
+
+    /* Card glass */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      box-shadow: 0 8px 30px rgba(10,10,15,0.08);
+    }
+
+    /* Option styles */
+    .option-btn {
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .option-btn:hover { transform: translateY(-3px); }
+    .option-selected {
+      background: linear-gradient(90deg, rgba(99,102,241,0.12), rgba(6,182,212,0.08));
+      border-color: rgba(99,102,241,0.6);
+      box-shadow: 0 6px 18px rgba(99,102,241,0.08);
+    }
+
+    /* Correct / incorrect styling */
+    .answer-correct { color: #15803d; font-weight:700; }
+    .answer-incorrect { color: #dc2626; font-weight:700; text-decoration: line-through; }
+
+    /* Small screen tweaks */
+    @media (max-width:640px){
+      .card { padding: 1rem; }
+    }
+
+    /* teacher table scroll style */
+    .table-scroll { max-height: 40vh; overflow:auto; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-anim relative">
+
+  <!-- Floating school icons (decor) -->
+  <div class="floating-wrap" aria-hidden="true">
+    <!-- We'll create icons with JS to vary positions & timings -->
+  </div>
+
+  <!-- Main container -->
+  <div class="min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-4xl card rounded-2xl p-8 md:p-10 relative z-10">
+
+      <!-- Welcome Screen -->
+      <div id="welcome-screen">
+        <div class="flex flex-col md:flex-row items-center gap-6">
+          <div class="flex-1">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800">Mathematics CBT — Grade 6</h1>
+            <p class="mt-3 text-slate-700">Friendly maths quizzes with instant grading. Enter your full name to begin. Each session has <span class="font-semibold">20 randomized questions</span>.</p>
+
+            <div class="mt-6">
+              <label class="block text-sm font-medium text-slate-700">Student full name</label>
+              <input id="student-name" type="text" placeholder="e.g., Oyemakinde Annabelle" class="w-full mt-2 p-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
+              <p id="name-error" class="text-red-500 text-sm mt-2 hidden">Please enter your full name.</p>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+              <button id="start-btn" class="px-6 py-3 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white font-semibold shadow">Start Test</button>
+              <button id="teacher-panel-btn" class="px-4 py-3 rounded-lg bg-slate-600 hover:bg-slate-700 text-white font-medium shadow">Teacher Panel</button>
+            </div>
+
+            <div class="mt-6 text-sm text-slate-600">
+           </div>
+          </div>
+
+          <div class="w-full md:w-1/2 p-4">
+            <div class="bg-white rounded-xl p-4 shadow-md">
+              <h3 class="font-semibold text-slate-800">What to expect</h3>
+              <ul class="mt-3 list-disc list-inside text-slate-600 space-y-1">
+                <li>20 questions drawn randomly from a larger pool.</li>
+                <li>Multiple choice (4 options per question).</li>
+                <li>Instant scoring and review at the end.</li>
+                <li>Teacher access to view & export results.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz Screen -->
+      <div id="quiz-screen" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="text-sm text-slate-600">Student: <span id="display-name" class="font-semibold text-slate-800"></span></div>
+            <div class="text-xs text-slate-500">Question <span id="q-num">1</span> of <span id="q-total">20</span></div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm text-slate-600">Marks: <span id="marks-info" class="font-semibold">5 per question</span></div>
+            <button id="quit-btn" class="text-sm mt-1 px-3 py-1 rounded bg-rose-500 text-white hover:bg-rose-600">Quit</button>
+          </div>
+        </div>
+
+        <div class="border rounded-xl p-6 bg-white mb-4">
+          <h2 id="question-text" class="text-xl font-semibold text-slate-900 min-h-[56px]">Question text</h2>
+
+          <div id="options-container" class="grid grid-cols-1 gap-3 mt-5"></div>
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <button id="prev-btn" class="flex-1 py-3 rounded-lg border border-slate-300 text-slate-700 disabled:opacity-50">Previous</button>
+          <button id="next-btn" class="flex-1 py-3 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50">Next</button>
+        </div>
+      </div>
+
+      <!-- Result Screen -->
+      <div id="result-screen" class="hidden">
+        <div class="text-center mb-6">
+          <h1 id="result-title" class="text-3xl font-extrabold text-slate-800">Test Submitted!</h1>
+          <p class="mt-2 text-slate-600">Great job, <span id="result-name" class="font-semibold text-indigo-600"></span> 🎉</p>
+        </div>
+
+        <div class="bg-slate-50 p-6 rounded-xl mb-6">
+          <div class="text-center">
+            <p class="text-sm text-slate-600 uppercase">Your score</p>
+            <p id="result-score" class="text-6xl font-extrabold text-indigo-600 my-2">0%</p>
+            <p id="result-details" class="text-slate-700 text-lg"></p>
+          </div>
+        </div>
+
+        <h3 class="font-semibold text-slate-800 mb-3">Answer Review</h3>
+        <div id="review-list" class="space-y-4 max-h-64 overflow-y-auto p-2"></div>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button id="home-btn" class="col-span-1 md:col-span-1 py-3 rounded-lg bg-cyan-500 text-white font-semibold">Back to Home</button>
+          <button id="retake-btn" class="col-span-1 md:col-span-1 py-3 rounded-lg bg-slate-600 text-white">Take New Test</button>
+          <button id="download-csv-btn" class="col-span-1 md:col-span-1 py-3 rounded-lg bg-amber-500 text-white">Download My Result (CSV)</button>
+        </div>
+      </div>
+
+      <!-- Teacher Panel / Admin -->
+      <div id="teacher-panel" class="hidden">
+        <h2 class="text-2xl font-bold text-slate-800 mb-3">Teacher Control Panel</h2>
+        <div class="mb-4">
+          <input id="teacher-pass-input" type="password" placeholder="Enter passcode" class="p-3 rounded-lg border border-slate-200 mr-3" />
+          <button id="teacher-unlock-btn" class="px-4 py-2 rounded-lg bg-indigo-600 text-white">Unlock</button>
+          <button id="teacher-back-btn" class="px-3 py-2 rounded-lg bg-slate-400 text-white ml-2">Back</button>
+        </div>
+
+        <div id="teacher-controls" class="hidden">
+          <div class="mb-4 flex flex-col md:flex-row items-center justify-between gap-3">
+            <div class="flex gap-3">
+              <button id="export-all-csv" class="px-4 py-2 bg-emerald-500 text-white rounded-lg">Export All (CSV)</button>
+              <button id="clear-all-btn" class="px-4 py-2 bg-rose-500 text-white rounded-lg">Clear All Data</button>
+            </div>
+            <div class="text-sm text-slate-600">Saved submissions: <span id="submission-count" class="font-semibold">0</span></div>
+          </div>
+
+          <div class="table-scroll border rounded p-2 bg-white">
+            <table class="min-w-full text-left">
+              <thead class="bg-gray-50 sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-xs text-slate-500">Student</th>
+                  <th class="px-3 py-2 text-xs text-slate-500">Score</th>
+                  <th class="px-3 py-2 text-xs text-slate-500">Correct</th>
+                  <th class="px-3 py-2 text-xs text-slate-500">Date</th>
+                  <th class="px-3 py-2 text-xs text-slate-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="teacher-table-body"></tbody>
+            </table>
+          </div>
+
+          <div id="teacher-detail" class="hidden mt-6">
+            <h3 class="font-semibold text-slate-800" id="detail-name">Student name</h3>
+            <div class="mb-3 text-sm text-slate-600" id="detail-meta"></div>
+            <div id="detail-answers" class="space-y-3 p-3 bg-slate-50 rounded"></div>
+            <div class="mt-4">
+              <button id="detail-back-btn" class="px-3 py-2 bg-slate-400 text-white rounded">Back</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /***********************
+     * DATA: Questions Pool
+     * 30 sample mixed math questions (will pick 20 per session)
+     ***********************/
+    const questionPool = [
+            { question: "Write 408,002 in words.", options: ["Four hundred and eight thousand, two hundred", "Four hundred and eight thousand and two", "Forty thousand, eight hundred and two", "Four thousand, eight hundred and two"], correctAnswer: "Four hundred and eight thousand and two" },
+            { question: "Write in figures: Nine million, sixty thousand and twenty.", options: ["9,600,020", "9,060,020", "9,006,020", "9,060,200"], correctAnswer: "9,060,020" },
+            { question: "Expand 5,023,016.", options: ["5,000,000 + 200 + 3,000 + 10 + 6", "5,000,000 + 20,000 + 3,000 + 10 + 6", "50,000 + 2,000 + 30 + 16", "5,000,000 + 2,000 + 30 + 6"], correctAnswer: "5,000,000 + 20,000 + 3,000 + 10 + 6" },
+            { question: "Write 0.304 in expanded form.", options: ["3/10 + 4/1000", "3/10 + 0/100 + 4/1000", "3/100 + 4/10", "3/1000 + 4/10"], correctAnswer: "3/10 + 0/100 + 4/1000" },
+            { question: "What is 4.3 + 2.65?", options: ["6.8", "6.95", "6.85", "7.05"], correctAnswer: "6.95" },
+            { question: "Subtract 9.84 – 4.72.", options: ["5.12", "4.12", "3.12", "5.22"], correctAnswer: "5.12" },
+            { question: "Multiply: 0.4 × 0.6", options: ["0.24", "2.4", "0.004", "0.26"], correctAnswer: "0.24" },
+            { question: "Solve: 2.4 + 1.35 – 0.5", options: ["3.25", "3.35", "3.45", "3.55"], correctAnswer: "3.25" },
+            { question: "Change ½ to a decimal.", options: ["0.5", "0.25", "0.2", "0.4"], correctAnswer: "0.5" },
+            { question: "Change ¾ to a decimal.", options: ["0.25", "0.75", "0.7", "0.5"], correctAnswer: "0.75" },
+            { question: "What is the place value of 7 in 37,524?", options: ["Tens", "Hundreds", "Thousands", "Ten thousands"], correctAnswer: "Thousands" },
+            { question: "Write 2.506 in words.", options: ["Two point five hundred and six", "Two and five hundred and six", "Two point five zero six", "Two and six tenths"], correctAnswer: "Two point five zero six" },
+            { question: "Expand 43.062", options: ["40 + 3 + 0.6 + 0.02", "40 + 3 + 0.06 + 0.002", "4 + 30 + 0.06 + 0.002", "40 + 3 + 0.06 + 0.2"], correctAnswer: "40 + 3 + 0.06 + 0.002" },
+            { question: "Add: 12.45 + 8.9", options: ["21.35", "20.35", "22.35", "21.25"], correctAnswer: "21.35" },
+            { question: "Subtract: 20.5 – 7.38", options: ["13.02", "13.12", "12.12", "13.22"], correctAnswer: "13.12" },
+            { question: "Multiply: 4.2 × 3", options: ["12.2", "12.4", "12.6", "13.2"], correctAnswer: "12.6" },
+            { question: "What is the place value of 5 in 45,873,002?", options: ["Hundred thousand", "Million", "Ten thousand", "Thousand"], correctAnswer: "Million" },
+            { question: "Write in figures: Two hundred and five thousand, four hundred and two.", options: ["2,054,002", "205,402", "25,402", "205,420"], correctAnswer: "205,402" },
+            { question: "Convert 0.8 to a fraction.", options: ["8/10", "8/100", "1/8", "4/10"], correctAnswer: "8/10" },
+            { question: "Convert 0.45 to its simplest fractional form.", options: ["45/10", "45/100 = 9/20", "45/100 = 5/10", "45/1000 = 9/200"], correctAnswer: "45/100 = 9/20" }
+        ];
+
+    /***********************
+     * App State
+     ***********************/
+    const QUESTIONS_PER_SESSION = 20;
+    let pool = [];            // copy of pool for shuffling
+    let sessionQuestions = []; // chosen 20 questions for this run
+    let currentIndex = 0;
+    let userAnswers = [];     // stores chosen option text per question index
+    let studentName = "";
+    let isQuizActive = false;
+    let focusLost = 0; // optional: detect tab change
+
+    /***********************
+     * DOM refs
+     ***********************/
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const teacherPanel = document.getElementById('teacher-panel');
+
+    const studentNameInput = document.getElementById('student-name');
+    const nameError = document.getElementById('name-error');
+    const startBtn = document.getElementById('start-btn');
+    const teacherPanelBtn = document.getElementById('teacher-panel-btn');
+
+    const displayName = document.getElementById('display-name');
+    const qNum = document.getElementById('q-num');
+    const qTotal = document.getElementById('q-total');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const quitBtn = document.getElementById('quit-btn');
+
+    const resultName = document.getElementById('result-name');
+    const resultScore = document.getElementById('result-score');
+    const resultDetails = document.getElementById('result-details');
+    const reviewList = document.getElementById('review-list');
+    const homeBtn = document.getElementById('home-btn');
+    const retakeBtn = document.getElementById('retake-btn');
+    const downloadCsvBtn = document.getElementById('download-csv-btn');
+
+    // Teacher refs
+    const teacherPassInput = document.getElementById('teacher-pass-input');
+    const teacherUnlockBtn = document.getElementById('teacher-unlock-btn');
+    const teacherBackBtn = document.getElementById('teacher-back-btn');
+    const teacherControls = document.getElementById('teacher-controls');
+    const teacherTableBody = document.getElementById('teacher-table-body');
+    const submissionCountEl = document.getElementById('submission-count');
+    const exportAllCsvBtn = document.getElementById('export-all-csv');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    const teacherDetail = document.getElementById('teacher-detail');
+    const detailName = document.getElementById('detail-name');
+    const detailMeta = document.getElementById('detail-meta');
+    const detailAnswers = document.getElementById('detail-answers');
+    const detailBackBtn = document.getElementById('detail-back-btn');
+
+    /***********************
+     * Utils
+     ***********************/
+    function shuffleArray(arr){
+      for(let i = arr.length -1; i>0; i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    function pickRandomPool(n){
+      const copy = [...pool];
+      shuffleArray(copy);
+      return copy.slice(0, n);
+    }
+
+    function openScreen(name){
+      welcomeScreen.classList.add('hidden');
+      quizScreen.classList.add('hidden');
+      resultScreen.classList.add('hidden');
+      teacherPanel.classList.add('hidden');
+
+      if(name === 'welcome') welcomeScreen.classList.remove('hidden');
+      if(name === 'quiz') quizScreen.classList.remove('hidden');
+      if(name === 'result') resultScreen.classList.remove('hidden');
+      if(name === 'teacher') teacherPanel.classList.remove('hidden');
+    }
+
+    function formatDate(ts){
+      const d = new Date(ts);
+      return d.toLocaleString();
+    }
+
+    /***********************
+     * Floating icons creation (decorative)
+     ***********************/
+    (function createFloatingIcons(){
+      const wrap = document.querySelector('.floating-wrap');
+      const icons = [
+        '➕','✖','➗','➖','📐','📘','✏️','🧮','🔢','📚','⭐','💡','📚','🎉','📝','🔔','🌟','💛','🖊️','🎈'
+      ];
+      for(let i=0;i<12;i++){
+        const el = document.createElement('div');
+        el.className = 'float-icon';
+        el.style.left = Math.random()*100 + '%';
+        el.style.fontSize = (12 + Math.random()*28) + 'px';
+        el.style.animationDuration = (8 + Math.random()*12) + 's';
+        el.style.top = (80 + Math.random()*20) + '%';
+        el.style.opacity = 0.9;
+        el.textContent = icons[Math.floor(Math.random()*icons.length)];
+        wrap.appendChild(el);
+      }
+    })();
+
+    /***********************
+     * Start Test
+     ***********************/
+    startBtn.addEventListener('click', () => {
+      const name = studentNameInput.value.trim();
+      if(!name){
+        nameError.classList.remove('hidden');
+        return;
+      }
+      nameError.classList.add('hidden');
+
+      studentName = name;
+      startSession();
+    });
+
+    // Quit to home
+    quitBtn.addEventListener('click', () => {
+      if(confirm('Quit test and return to home? Your current progress will be lost.')){
+        openScreen('welcome');
+        resetSession();
+      }
+    });
+
+    // Prev / Next
+    prevBtn.addEventListener('click', () => {
+      if(currentIndex > 0){
+        currentIndex--;
+        renderQuestion();
+      }
+    });
+    nextBtn.addEventListener('click', () => {
+      // If last question, submit
+      if(currentIndex < sessionQuestions.length - 1){
+        // ensure answer is selected
+        if(userAnswers[currentIndex] == null){
+          alert('Please select an answer to proceed.');
+          return;
+        }
+        currentIndex++;
+        renderQuestion();
+      } else {
+        // final: ensure answer selected
+        if(userAnswers[currentIndex] == null){
+          alert('Please select an answer before submitting.');
+          return;
+        }
+        submitSession();
+      }
+    });
+
+    function startSession(){
+      // prepare pool
+      pool = JSON.parse(JSON.stringify(questionPool)); // deep copy
+      // for safety, shuffle options inside each question
+      pool.forEach(q => shuffleArray(q.options));
+
+      // pick 20 unique
+      sessionQuestions = pickRandomPool(QUESTIONS_PER_SESSION);
+      // ensure each question's options are shuffled
+      sessionQuestions.forEach(q => shuffleArray(q.options));
+
+      currentIndex = 0;
+      userAnswers = new Array(sessionQuestions.length).fill(null);
+      isQuizActive = true;
+      focusLost = 0;
+
+      displayName.textContent = studentName;
+      qTotal.textContent = sessionQuestions.length;
+
+      renderQuestion();
+      openScreen('quiz');
+    }
+
+    function renderQuestion(){
+      const q = sessionQuestions[currentIndex];
+      qNum.textContent = currentIndex + 1;
+      questionText.textContent = q.question;
+
+      optionsContainer.innerHTML = '';
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn w-full text-left p-3 rounded-lg border border-slate-200';
+        btn.textContent = opt;
+        // show selected state
+        if(userAnswers[currentIndex] === opt){
+          btn.classList.add('option-selected');
+        }
+        btn.addEventListener('click', () => {
+          userAnswers[currentIndex] = opt;
+          // remove selection from siblings
+          Array.from(optionsContainer.children).forEach(c=> c.classList.remove('option-selected'));
+          btn.classList.add('option-selected');
+        });
+        optionsContainer.appendChild(btn);
+      });
+
+      // update buttons
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.textContent = (currentIndex === sessionQuestions.length - 1) ? 'Submit' : 'Next';
+    }
+
+    /***********************
+     * Submit and grading
+     ***********************/
+    function submitSession(){
+      isQuizActive = false;
+      // calculate score
+      let correctCount = 0;
+      const answersDetail = [];
+
+      sessionQuestions.forEach((q, idx) => {
+        const chosen = userAnswers[idx];
+        const isCorrect = chosen === q.correct;
+        if(isCorrect) correctCount++;
+        answersDetail.push({
+          question: q.question,
+          options: q.options,
+          userAnswer: chosen,
+          correctAnswer: q.correct,
+          isCorrect
+        });
+      });
+
+      const marksPerQuestion = 5;
+      const totalMarks = sessionQuestions.length * marksPerQuestion;
+      const marksObtained = correctCount * marksPerQuestion;
+      const percent = Math.round((correctCount / sessionQuestions.length) * 100);
+
+      // save submission into localStorage
+      const submission = {
+        id: 's_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+        studentName,
+        correctCount,
+        totalQuestions: sessionQuestions.length,
+        marksObtained,
+        totalMarks,
+        percent,
+        answers: answersDetail,
+        timestamp: Date.now()
+      };
+      saveSubmission(submission);
+
+      // show results
+      showResults(submission);
+    }
+
+    function showResults(sub){
+      resultName.textContent = sub.studentName;
+      resultScore.textContent = sub.percent + '%';
+      resultDetails.textContent = `${sub.marksObtained}/${sub.totalMarks} (${sub.correctCount}/${sub.totalQuestions} correct)`;
+
+      // populate review
+      reviewList.innerHTML = '';
+      sub.answers.forEach((a, idx) => {
+        const div = document.createElement('div');
+        div.className = 'p-3 rounded-lg border bg-white';
+        const qno = idx + 1;
+        const html = `
+          <div class="flex justify-between items-start">
+            <div class="text-sm font-semibold text-slate-800">Q${qno}: ${a.question}</div>
+            <div class="text-sm ${a.isCorrect ? 'text-green-600' : 'text-rose-600'} font-bold">${a.isCorrect ? 'Correct' : 'Wrong'}</div>
+          </div>
+          <div class="mt-2 text-sm text-slate-700">
+            <div>Your answer: <span class="${a.isCorrect ? 'answer-correct' : 'answer-incorrect'}">${a.userAnswer ?? 'No answer'}</span></div>
+            ${a.isCorrect ? '' : `<div class="mt-1">Correct answer: <span class="font-semibold">${a.correctAnswer}</span></div>`}
+          </div>
+        `;
+        div.innerHTML = html;
+        reviewList.appendChild(div);
+      });
+
+      openScreen('result');
+    }
+
+    /***********************
+     * Storage helpers
+     ***********************/
+    const STORAGE_KEY = 'math_cbt_submissions_v1';
+
+    function saveSubmission(sub){
+      const cur = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      cur.push(sub);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cur));
+    }
+
+    function getAllSubmissions(){
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
+
+    function clearAllSubmissions(){
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    /***********************
+     * Result actions
+     ***********************/
+    homeBtn.addEventListener('click', () => {
+      resetSession();
+      openScreen('welcome');
+    });
+
+    retakeBtn.addEventListener('click', () => {
+      // reset input name so student can re-enter if needed
+      studentNameInput.value = '';
+      resetSession();
+      openScreen('welcome');
+    });
+
+    downloadCsvBtn.addEventListener('click', () => {
+      const sub = getAllSubmissions().slice(-1)[0]; // last saved
+      if(!sub){
+        alert('No result found to download.');
+        return;
+      }
+      const csv = submissionToCSV([sub]);
+      downloadFile(csv, `${sub.studentName.replace(/\s+/g,'_')}_result.csv`, 'text/csv');
+    });
+
+    function submissionToCSV(arr){
+      // Build small CSV with question, user answer, correct answer, isCorrect
+      const header = ['Student','Timestamp','Percent','Marks','Question No','Question','User Answer','Correct Answer','Is Correct'];
+      const rows = [header.join(',')];
+      arr.forEach(s => {
+        s.answers.forEach((a, idx) => {
+          const row = [
+            `"${s.studentName}"`,
+            `"${new Date(s.timestamp).toLocaleString()}"`,
+            s.percent,
+            `${s.marksObtained}/${s.totalMarks}`,
+            idx+1,
+            `"${a.question.replace(/"/g,'""')}"`,
+            `"${(a.userAnswer || '').replace(/"/g,'""')}"`,
+            `"${a.correctAnswer.replace(/"/g,'""')}"`,
+            a.isCorrect ? 'TRUE' : 'FALSE'
+          ];
+          rows.push(row.join(','));
+        });
+      });
+      return rows.join('\n');
+    }
+
+    function downloadFile(content, filename, mime){
+      const blob = new Blob([content], {type: mime});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    /***********************
+     * Teacher panel logic
+     ***********************/
+    teacherPanelBtn.addEventListener('click', () => {
+      // open teacher panel
+      openScreen('teacher');
+      teacherControls.classList.add('hidden');
+      teacherDetail.classList.add('hidden');
+      teacherPassInput.value = '';
+    });
+
+    teacherBackBtn.addEventListener('click', () => {
+      openScreen('welcome');
+    });
+
+    teacherUnlockBtn.addEventListener('click', () => {
+      const pass = teacherPassInput.value.trim();
+      // default passcode: teach123 (change if you want)
+      if(pass === 'teach123'){
+        teacherControls.classList.remove('hidden');
+        loadTeacherTable();
+      } else {
+        alert('Incorrect passcode.');
+      }
+    });
+
+    function loadTeacherTable(){
+      const subs = getAllSubmissions().sort((a,b)=> b.timestamp - a.timestamp);
+      teacherTableBody.innerHTML = '';
+      submissionCountEl.textContent = subs.length;
+      if(subs.length === 0){
+        teacherTableBody.innerHTML = `<tr><td class="px-3 py-2" colspan="5">No submissions found.</td></tr>`;
+        return;
+      }
+      subs.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 cursor-pointer';
+        tr.innerHTML = `
+          <td class="px-3 py-2 text-sm font-medium text-slate-800">${s.studentName}</td>
+          <td class="px-3 py-2 text-sm font-semibold ${s.percent < 60 ? 'text-rose-600' : 'text-emerald-600'}">${s.percent}%</td>
+          <td class="px-3 py-2 text-sm">${s.correctCount}/${s.totalQuestions}</td>
+          <td class="px-3 py-2 text-sm text-slate-500">${new Date(s.timestamp).toLocaleString()}</td>
+          <td class="px-3 py-2 text-sm"><button data-id="${s.id}" class="view-detail px-2 py-1 bg-indigo-600 text-white rounded">View</button></td>
+        `;
+        teacherTableBody.appendChild(tr);
+      });
+
+      // attach view handlers
+      Array.from(document.querySelectorAll('.view-detail')).forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          const id = e.target.getAttribute('data-id');
+          showTeacherDetail(id);
+        });
+      });
+    }
+
+    function showTeacherDetail(id){
+      teacherDetail.classList.remove('hidden');
+      const subs = getAllSubmissions();
+      const s = subs.find(x=>x.id === id);
+      if(!s) return alert('Submission not found.');
+
+      detailName.textContent = s.studentName;
+      detailMeta.textContent = `Score: ${s.percent}% — ${s.marksObtained}/${s.totalMarks} (${s.correctCount}/${s.totalQuestions}). Date: ${new Date(s.timestamp).toLocaleString()}`;
+
+      detailAnswers.innerHTML = '';
+      s.answers.forEach((a, idx) => {
+        const div = document.createElement('div');
+        div.className = 'p-2 bg-white border rounded';
+        div.innerHTML = `<div class="text-sm font-semibold">Q${idx+1}: ${a.question}</div>
+          <div class="text-sm mt-1">Your: <span class="${a.isCorrect?'answer-correct':'answer-incorrect'}">${a.userAnswer ?? 'No answer'}</span></div>
+          ${a.isCorrect? '' : `<div class="text-sm mt-1">Correct: <strong>${a.correctAnswer}</strong></div>`}
+        `;
+        detailAnswers.appendChild(div);
+      });
+
+      // hide table to focus on detail
+      // (we keep the table visible but the detail shows below)
+    }
+
+    detailBackBtn.addEventListener('click', () => {
+      teacherDetail.classList.add('hidden');
+    });
+
+    exportAllCsvBtn.addEventListener('click', () => {
+      const all = getAllSubmissions();
+      if(all.length === 0){ alert('No submissions to export.'); return; }
+      const csv = submissionToCSV(all);
+      downloadFile(csv, `all_submissions_${Date.now()}.csv`, 'text/csv');
+    });
+
+    clearAllBtn.addEventListener('click', () => {
+      if(confirm('Are you sure? This will permanently remove all stored submissions from this browser.')){
+        clearAllSubmissions();
+        loadTeacherTable();
+      }
+    });
+
+    /***********************
+     * Helpers & reset
+     ***********************/
+    function resetSession(){
+      sessionQuestions = [];
+      userAnswers = [];
+      currentIndex = 0;
+      studentName = '';
+      studentNameInput.value = '';
+      isQuizActive = false;
+    }
+
+    /***********************
+     * Optional: detect visibility change (anti-cheat behavior)
+     ***********************/
+    document.addEventListener('visibilitychange', () => {
+      if(document.hidden && isQuizActive){
+        focusLost++;
+        // optional: you can show or store focusLost count per session later
+        // For now we just track it locally
+      }
+    });
+
+    /***********************
+     * Initialize: show welcome
+     ***********************/
+    openScreen('welcome');
+
+    /***********************
+     * Final notes
+     ***********************/
+    // You can:
+    // - Replace questionPool with your full 100+ dataset.
+    // - Change teacher passcode by editing 'teach123'.
+    // - Later add online saving (Firebase/Supabase) using the saved structure.
+  </script>
+</body>
+</html>
